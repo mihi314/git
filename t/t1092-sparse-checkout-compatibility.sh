@@ -1377,7 +1377,10 @@ test_expect_success 'index.sparse disabled inline uses full index' '
 	! test_region index ensure_full_index trace2.txt
 '
 
-ensure_not_expanded () {
+ensure_index_state () {
+	local expected_expansion="$1"
+	shift
+
 	rm -f trace2.txt &&
 	if test -z "$WITHOUT_UNTRACKED_TXT"
 	then
@@ -1398,7 +1401,21 @@ ensure_not_expanded () {
 			>sparse-index-out \
 			2>sparse-index-error || return 1
 	fi &&
-	test_region ! index ensure_full_index trace2.txt
+
+	if [ "$expected_expansion" = "expanded" ]
+	then
+		test_region index ensure_full_index trace2.txt
+	else
+		test_region ! index ensure_full_index trace2.txt
+	fi
+}
+
+ensure_expanded () {
+	ensure_index_state "expanded" "$@"
+}
+
+ensure_not_expanded () {
+	ensure_index_state "not_expanded" "$@"
 }
 
 test_expect_success 'sparse-index is not expanded' '
@@ -2152,6 +2169,20 @@ test_expect_success 'diff-files with pathspec outside sparse definition' '
 	test_all_match git diff-files &&
 	test_all_match git diff-files folder1/a &&
 	test_all_match git diff-files "folder*/a"
+'
+
+test_expect_success 'sparse index is not expanded: diff-files' '
+	init_repos &&
+
+	write_script edit-contents <<-\EOF &&
+	echo text >>"$1"
+	EOF
+
+	run_on_all ../edit-contents deep/a &&
+
+	ensure_not_expanded diff-files &&
+	ensure_not_expanded diff-files deep/a &&
+	ensure_not_expanded diff-files "deep/*"
 '
 
 test_done
