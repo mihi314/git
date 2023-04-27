@@ -54,6 +54,13 @@ enum display_format {
 	DISPLAY_FORMAT_UNKNOWN = 0,
 	DISPLAY_FORMAT_FULL,
 	DISPLAY_FORMAT_COMPACT,
+	DISPLAY_FORMAT_MAX,
+};
+
+static const char * const display_formats[DISPLAY_FORMAT_MAX] = {
+	NULL,
+	"full",
+	"compact",
 };
 
 struct display_state {
@@ -1882,7 +1889,8 @@ static int fetch_finished(int result, struct strbuf *out,
 	return 0;
 }
 
-static int fetch_multiple(struct string_list *list, int max_children)
+static int fetch_multiple(struct string_list *list, int max_children,
+			  enum display_format format)
 {
 	int i, result = 0;
 	struct strvec argv = STRVEC_INIT;
@@ -1901,6 +1909,9 @@ static int fetch_multiple(struct string_list *list, int max_children)
 		     "fetch", "--append", "--no-auto-gc",
 		     "--no-write-commit-graph", NULL);
 	add_options_to_argv(&argv);
+
+	if (format != DISPLAY_FORMAT_UNKNOWN)
+		strvec_pushf(&argv, "--output-format=%s", display_formats[format]);
 
 	if (max_children != 1 && list->nr != 1) {
 		struct parallel_fetch_state state = { argv.v, list, 0, 0 };
@@ -2058,6 +2069,29 @@ static int fetch_one(struct remote *remote, int argc, const char **argv,
 	return exit_code;
 }
 
+static enum display_format parse_display_format(const char *format)
+{
+	for (int i = 0; i < ARRAY_SIZE(display_formats); i++)
+		if (display_formats[i] && !strcmp(display_formats[i], format))
+			return i;
+	return DISPLAY_FORMAT_UNKNOWN;
+}
+
+static int opt_parse_output_format(const struct option *opt, const char *arg, int unset)
+{
+	enum display_format *format = opt->value, parsed;
+
+	if (unset || !arg)
+		return 1;
+
+	parsed = parse_display_format(arg);
+	if (parsed == DISPLAY_FORMAT_UNKNOWN)
+		return error(_("unsupported output format '%s'"), arg);
+	*format = parsed;
+
+	return 0;
+}
+
 int cmd_fetch(int argc, const char **argv, const char *prefix)
 {
 	const char *bundle_uri;
@@ -2110,6 +2144,8 @@ int cmd_fetch(int argc, const char **argv, const char *prefix)
 			    PARSE_OPT_OPTARG, option_fetch_parse_recurse_submodules),
 		OPT_BOOL(0, "dry-run", &dry_run,
 			 N_("dry run")),
+		OPT_CALLBACK(0, "output-format", &display_format, N_("format"), N_("output format"),
+			     opt_parse_output_format),
 		OPT_BOOL(0, "write-fetch-head", &write_fetch_head,
 			 N_("write fetched references to the FETCH_HEAD file")),
 		OPT_BOOL('k', "keep", &keep, N_("keep downloaded pack")),
@@ -2189,11 +2225,9 @@ int cmd_fetch(int argc, const char **argv, const char *prefix)
 		const char *format = "full";
 
 		git_config_get_string_tmp("fetch.output", &format);
-		if (!strcasecmp(format, "full"))
-			display_format = DISPLAY_FORMAT_FULL;
-		else if (!strcasecmp(format, "compact"))
-			display_format = DISPLAY_FORMAT_COMPACT;
-		else
+
+		display_format = parse_display_format(format);
+		if (display_format == DISPLAY_FORMAT_UNKNOWN)
 			die(_("invalid value for '%s': '%s'"),
 			    "fetch.output", format);
 	}
@@ -2347,7 +2381,7 @@ int cmd_fetch(int argc, const char **argv, const char *prefix)
 			max_children = fetch_parallel_config;
 
 		/* TODO should this also die if we have a previous partial-clone? */
-		result = fetch_multiple(&list, max_children);
+		result = fetch_multiple(&list, max_children, display_format);
 	}
 
 
