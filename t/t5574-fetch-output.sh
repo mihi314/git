@@ -102,6 +102,72 @@ test_expect_success 'fetch compact output with multiple remotes' '
 	test_cmp expect actual
 '
 
+test_expect_success 'fetch porcelain output' '
+	test_when_finished "rm -rf porcelain-cfg porcelain-cli" &&
+
+	# Set up a bunch of references that we can use to demonstrate different
+	# kinds of flag symbols in the output format.
+	MAIN_OLD=$(git rev-parse HEAD) &&
+	git branch "fast-forward" &&
+	git branch "deleted-branch" &&
+	git checkout -b force-updated &&
+	test_commit --no-tag force-update-old &&
+	FORCE_UPDATED_OLD=$(git rev-parse HEAD) &&
+	git checkout main &&
+
+	# Clone and pre-seed the repositories. We fetch references into two
+	# namespaces so that we can test that rejected and force-updated
+	# references are reported properly.
+	refspecs="refs/heads/*:refs/unforced/* +refs/heads/*:refs/forced/*" &&
+	git clone . porcelain-cli &&
+	git clone . porcelain-cfg &&
+	git -C porcelain-cfg fetch origin $refspecs &&
+	git -C porcelain-cli fetch origin $refspecs &&
+
+	# Now that we have set up the client repositories we can change our
+	# local references.
+	git branch new-branch &&
+	git branch -d deleted-branch &&
+	git checkout fast-forward &&
+	test_commit --no-tag fast-forward-new &&
+	FAST_FORWARD_NEW=$(git rev-parse HEAD) &&
+	git checkout force-updated &&
+	git reset --hard HEAD~ &&
+	test_commit --no-tag force-update-new &&
+	FORCE_UPDATED_NEW=$(git rev-parse HEAD) &&
+
+	cat >expect <<-EOF &&
+	- $MAIN_OLD $ZERO_OID refs/forced/deleted-branch
+	- $MAIN_OLD $ZERO_OID refs/unforced/deleted-branch
+	  $MAIN_OLD $FAST_FORWARD_NEW refs/unforced/fast-forward
+	! $FORCE_UPDATED_OLD $FORCE_UPDATED_NEW refs/unforced/force-updated
+	* $ZERO_OID $MAIN_OLD refs/unforced/new-branch
+	  $MAIN_OLD $FAST_FORWARD_NEW refs/forced/fast-forward
+	+ $FORCE_UPDATED_OLD $FORCE_UPDATED_NEW refs/forced/force-updated
+	* $ZERO_OID $MAIN_OLD refs/forced/new-branch
+	  $MAIN_OLD $FAST_FORWARD_NEW refs/remotes/origin/fast-forward
+	+ $FORCE_UPDATED_OLD $FORCE_UPDATED_NEW refs/remotes/origin/force-updated
+	* $ZERO_OID $MAIN_OLD refs/remotes/origin/new-branch
+	EOF
+
+	# Execute a dry-run fetch first. We do this to assert that the dry-run
+	# and non-dry-run fetches produces the same output. Execution of the
+	# fetch is expected to fail as we have a rejected reference update.
+	test_must_fail git -C porcelain-cfg -c fetch.output=porcelain fetch --dry-run --prune origin $refspecs >actual-dry-run-cfg &&
+	test_must_fail git -C porcelain-cli fetch --output-format=porcelain --dry-run --prune origin $refspecs >actual-dry-run-cli &&
+	test_cmp actual-dry-run-cfg actual-dry-run-cli &&
+	test_cmp expect actual-dry-run-cfg &&
+
+	# And now we perform a non-dry-run fetch.
+	test_must_fail git -C porcelain-cfg -c fetch.output=porcelain fetch --prune origin $refspecs >actual-cfg &&
+	test_must_fail git -C porcelain-cli fetch --output-format=porcelain --prune origin $refspecs >actual-cli &&
+	test_cmp actual-cfg actual-cli &&
+	test_cmp expect actual-cfg &&
+
+	# Ensure that the dry-run and non-dry-run output matches.
+	test_cmp actual-dry-run-cfg actual-cfg
+'
+
 test_expect_success 'fetch output with HEAD and --dry-run' '
 	test_when_finished "rm -rf head" &&
 	git clone . head &&
@@ -124,6 +190,24 @@ test_expect_success 'fetch output with HEAD and --dry-run' '
 	test_cmp expect actual &&
 
 	git -C head fetch origin HEAD:foo >actual 2>&1 &&
+	test_cmp expect actual
+'
+
+test_expect_success 'fetch porcelain output with HEAD and --dry-run' '
+	test_when_finished "rm -rf head" &&
+	git clone . head &&
+	COMMIT_ID=$(git rev-parse HEAD) &&
+
+	git -C head fetch --output-format=porcelain --dry-run origin HEAD >actual &&
+	cat >expect <<-EOF &&
+	* $ZERO_OID $COMMIT_ID FETCH_HEAD
+	EOF
+	test_cmp expect actual &&
+
+	git -C head fetch --output-format=porcelain --dry-run origin HEAD:foo >actual &&
+	cat >expect <<-EOF &&
+	* $ZERO_OID $COMMIT_ID refs/heads/foo
+	EOF
 	test_cmp expect actual
 '
 
