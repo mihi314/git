@@ -197,11 +197,24 @@ The output of "git fetch" depends on the transport method used; this
 section describes the output when fetching over the Git protocol
 (either locally or via ssh) and Smart HTTP protocol.
 
-The status of the fetch is output in tabular form, with each line
-representing the status of a single ref. Each line is of the form:
+The output format can be chosen either via the `fetch.output` config
+(see linkgit:git-config[1]), or via the `--output-format` switch.
+Supported values include:
+
+For the `full` and `compact` output formats, the status of the fetch is
+output in tabular, with each line representing the status of a single
+ref. Each line is of the form:
 
 -------------------------------
  <flag> <summary> <from> -> <to> [<reason>]
+-------------------------------
+
+The `porcelain` output format is intended to be machine-parseable. In
+contrast to the human-readable output formats it thus prints to standard
+output instead of standard error. Each line is of the form:
+
+-------------------------------
+<flag> <old-object-id> <new-object-id> <local-reference>
 -------------------------------
 
 The status of up-to-date refs is shown only if the --verbose option is

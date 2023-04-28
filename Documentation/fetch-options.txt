@@ -78,6 +78,11 @@ linkgit:git-config[1].
 --dry-run::
 	Show what would be done, without making any changes.
 
+--output-format::
+	Control how ref update status is printed. Valid values are
+	`full`, `compact` and `porcelain`. Default value is `full`.
+	See section OUTPUT in linkgit:git-fetch[1] for detail.
+
 ifndef::git-pull[]
 --[no-]write-fetch-head::
 	Write the list of remote refs fetched in the `FETCH_HEAD`
