@@ -120,20 +120,22 @@ repository upon 'git add' and 'git commit'.
 `text`
 ^^^^^^
 
-This attribute enables and controls end-of-line normalization.  When a
-text file is normalized, its line endings are converted to LF in the
-repository.  To control what line ending style is used in the working
-directory, use the `eol` attribute for a single file and the
-`core.eol` configuration variable for all text files.
-Note that setting `core.autocrlf` to `true` or `input` overrides
-`core.eol` (see the definitions of those options in
-linkgit:git-config[1]).
+This attribute marks the path as a text file, which enables end-of-line
+normalization on checkin and possibly also checkout: When a matching
+file is added to the index, even if it has CRLF line endings in the
+working directory, the file is stored in the index with LF line endings.
+Conversely, when the file is copied from the index to the working
+directory, its line endings may be converted from LF to CRLF depending
+on the `eol` attribute, the Git config, and the platform (see
+explanation of `eol` below).
 
 Set::
 
 	Setting the `text` attribute on a path enables end-of-line
-	normalization and marks the path as a text file.  End-of-line
-	conversion takes place without guessing the content type.
+	normalization on checkin and checkout as described above.  Line
+	endings are normalized in the index the next time the file is
+	checked in, even if the file was previously added to Git with CRLF
+	line endings.
 
 Unset::
 
@@ -142,10 +144,11 @@ Unset::
 
 Set to string value "auto"::
 
-	When `text` is set to "auto", the path is marked for automatic
-	end-of-line conversion.  If Git decides that the content is
-	text, its line endings are converted to LF on checkin.
-	When the file has been committed with CRLF, no conversion is done.
+	When `text` is set to "auto", Git decides by itself whether the file
+	is text or binary.  If it is text and the file was not already in
+	Git with CRLF endings, line endings are converted on checkin and
+	checkout as described above.  Otherwise, no conversion is done on
+	checkin or checkout.
 
 Unspecified::
 
@@ -162,23 +165,28 @@ unspecified.
 This attribute sets a specific line-ending style to be used in the
 working directory.  This attribute has effect only if the `text`
 attribute is set or unspecified, or if it is set to `auto`, the file is
-detected as text, and it is stored with LF endings in the index.  Note
-that setting this attribute on paths which are in the index with CRLF
-line endings may make the paths to be considered dirty unless
-`text=auto` is set. Adding the path to the index again will normalize
-the line endings in the index.
+detected as text, and it is stored with LF endings in the index.
 
 Set to string value "crlf"::
 
-	This setting forces Git to normalize line endings for this
-	file on checkin and convert them to CRLF when the file is
-	checked out.
+	This setting converts the file's line endings in the working
+	directory to CRLF when the file is checked out.
 
 Set to string value "lf"::
 
-	This setting forces Git to normalize line endings to LF on
-	checkin and prevents conversion to CRLF when the file is
-	checked out.
+	This setting uses the same line endings in the working directory as
+	in the index, whether they are LF or CRLF.  However, unless
+	`text=auto`, adding the file to the index again will normalize its
+	line endings to LF in the index.
+
+Unspecified::
+
+	If the `eol` attribute is unspecified for a file, its line endings
+	in the working directory are determined by the `core.autocrlf` or
+	`core.eol` configuration variable (see the definitions of those
+	options in linkgit:git-config[1]).  The default if `text` is set but
+	neither of those variables is is `eol=lf` on Unix and `eol=crlf` on
+	Windows.
 
 Backwards compatibility with `crlf` attribute
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
