@@ -1377,7 +1377,10 @@ test_expect_success 'index.sparse disabled inline uses full index' '
 	! test_region index ensure_full_index trace2.txt
 '
 
-ensure_not_expanded () {
+ensure_index_state () {
+	local expected_expansion="$1"
+	shift
+
 	rm -f trace2.txt &&
 	if test -z "$WITHOUT_UNTRACKED_TXT"
 	then
@@ -1398,7 +1401,21 @@ ensure_not_expanded () {
 			>sparse-index-out \
 			2>sparse-index-error || return 1
 	fi &&
-	test_region ! index ensure_full_index trace2.txt
+
+	if [ "$expected_expansion" = "expanded" ]
+	then
+		test_region index ensure_full_index trace2.txt
+	else
+		test_region ! index ensure_full_index trace2.txt
+	fi
+}
+
+ensure_expanded () {
+	ensure_index_state "expanded" "$@"
+}
+
+ensure_not_expanded () {
+	ensure_index_state "not_expanded" "$@"
 }
 
 test_expect_success 'sparse-index is not expanded' '
@@ -2106,6 +2123,66 @@ test_expect_success 'sparse-index is not expanded: write-tree' '
 	echo "test1" >>sparse-index/a &&
 	git -C sparse-index update-index a &&
 	ensure_not_expanded write-tree
+'
+
+test_expect_success 'diff-files with pathspec inside sparse definition' '
+	init_repos &&
+
+	write_script edit-contents <<-\EOF &&
+	echo text >>"$1"
+	EOF
+
+	run_on_all ../edit-contents deep/a &&
+
+	test_all_match git diff-files &&
+
+	test_all_match git diff-files deep/a &&
+
+	# test wildcard
+	test_all_match git diff-files "deep/*"
+'
+
+test_expect_success 'diff-files with pathspec outside sparse definition' '
+	init_repos &&
+
+	test_sparse_match test_must_fail git diff-files folder2/a &&
+
+	write_script edit-contents <<-\EOF &&
+	echo text >>"$1"
+	EOF
+
+	# Add file to the index but outside of cone for sparse-checkout cases.
+	# Add file to the index without sparse-checkout cases to ensure all have
+	# same output.
+	run_on_all mkdir -p folder1 &&
+	run_on_all cp a folder1/a &&
+
+	# file present on-disk without modifications
+	# use `--stat` to ignore file creation time differences in
+	# unrefreshed index
+	test_all_match git diff-files --stat &&
+	test_all_match git diff-files --stat folder1/a &&
+	test_all_match git diff-files --stat "folder*/a" &&
+
+	# file present on-disk with modifications
+	run_on_all ../edit-contents folder1/a &&
+	test_all_match git diff-files &&
+	test_all_match git diff-files folder1/a &&
+	test_all_match git diff-files "folder*/a"
+'
+
+test_expect_success 'sparse index is not expanded: diff-files' '
+	init_repos &&
+
+	write_script edit-contents <<-\EOF &&
+	echo text >>"$1"
+	EOF
+
+	run_on_all ../edit-contents deep/a &&
+
+	ensure_not_expanded diff-files &&
+	ensure_not_expanded diff-files deep/a &&
+	ensure_not_expanded diff-files "deep/*"
 '
 
 test_done
