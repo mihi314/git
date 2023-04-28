@@ -1449,6 +1449,9 @@ static int limit_list(struct rev_info *revs)
 		if (process_parents(revs, commit, &original_list, NULL) < 0)
 			return -1;
 		if (obj->flags & UNINTERESTING) {
+			if (revs->collect_uninteresting)
+				add_object_array(obj, NULL,
+						 &revs->uninteresting_commits);
 			mark_parents_uninteresting(revs, commit);
 			slop = still_interesting(original_list, date, slop, &interesting_cache);
 			if (slop)
@@ -3075,6 +3078,7 @@ void release_revisions(struct rev_info *revs)
 	diff_free(&revs->pruning);
 	reflog_walk_info_release(revs->reflog_info);
 	release_revisions_topo_walk_info(revs->topo_walk_info);
+	object_array_clear(&revs->uninteresting_commits);
 }
 
 static void add_child(struct rev_info *revs, struct commit *parent, struct commit *child)
@@ -3525,8 +3529,12 @@ static void explore_walk_step(struct rev_info *revs)
 	if (process_parents(revs, c, NULL, NULL) < 0)
 		return;
 
-	if (c->object.flags & UNINTERESTING)
+	if (c->object.flags & UNINTERESTING) {
+		if (revs->collect_uninteresting)
+			add_object_array(&c->object, NULL,
+					 &revs->uninteresting_commits);
 		mark_parents_uninteresting(revs, c);
+	}
 
 	for (p = c->parents; p; p = p->next)
 		test_flag_and_insert(&info->explore_queue, p->item, TOPO_WALK_EXPLORED);

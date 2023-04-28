@@ -125,6 +125,9 @@ struct rev_info {
 	/* Parents of shown commits */
 	struct object_array boundary_commits;
 
+	/* UNINTERESTING commits between the tips and boundary */
+	struct object_array uninteresting_commits;
+
 	/* The end-points specified by the end user */
 	struct rev_cmdline_info cmdline;
 
@@ -184,6 +187,7 @@ struct rev_info {
 			unpacked:1,
 			no_kept_objects:1,
 			boundary:2,
+			collect_uninteresting:1,
 			count:1,
 			left_right:1,
 			left_only:1,
@@ -405,6 +409,7 @@ struct rev_info {
 	.expand_tabs_in_log = -1, \
 	.commit_format = CMIT_FMT_DEFAULT, \
 	.expand_tabs_in_log_default = 8, \
+	.uninteresting_commits = OBJECT_ARRAY_INIT, \
 }
 
 /**
