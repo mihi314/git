@@ -28,6 +28,7 @@ struct add_i_state {
 
 	int use_single_key;
 	char *interactive_diff_filter, *interactive_diff_algorithm;
+	char *interactive_diff_color_moved, *interactive_diff_color_moved_ws;
 	int context, interhunkcontext;
 };
 

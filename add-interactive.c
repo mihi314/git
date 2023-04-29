@@ -103,6 +103,14 @@ void init_add_i_state(struct add_i_state *s, struct repository *r,
 	repo_config_get_string(r, "diff.algorithm",
 			       &s->interactive_diff_algorithm);
 
+	FREE_AND_NULL(s->interactive_diff_color_moved);
+	repo_config_get_string(r, "diff.colorMoved",
+			       &s->interactive_diff_color_moved);
+
+	FREE_AND_NULL(s->interactive_diff_color_moved_ws);
+	repo_config_get_string(r, "diff.colorMovedWS",
+			       &s->interactive_diff_color_moved_ws);
+
 	if (!repo_config_get_int(r, "diff.context", &s->context))
 		if (s->context < 0)
 			die(_("%s cannot be negative"), "diff.context");
@@ -130,6 +138,8 @@ void clear_add_i_state(struct add_i_state *s)
 {
 	FREE_AND_NULL(s->interactive_diff_filter);
 	FREE_AND_NULL(s->interactive_diff_algorithm);
+	FREE_AND_NULL(s->interactive_diff_color_moved);
+	FREE_AND_NULL(s->interactive_diff_color_moved_ws);
 	memset(s, 0, sizeof(*s));
 	s->use_color_interactive = GIT_COLOR_UNKNOWN;
 	s->use_color_diff = GIT_COLOR_UNKNOWN;

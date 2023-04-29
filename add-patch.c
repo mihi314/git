@@ -429,6 +429,11 @@ static int parse_diff(struct add_p_state *s, const struct pathspec *ps)
 		strvec_pushf(&args, "--inter-hunk-context=%i", s->s.interhunkcontext);
 	if (s->s.interactive_diff_algorithm)
 		strvec_pushf(&args, "--diff-algorithm=%s", s->s.interactive_diff_algorithm);
+	if (s->s.interactive_diff_color_moved)
+		strvec_pushf(&args, "--color-moved=%s", s->s.interactive_diff_color_moved);
+	if (s->s.interactive_diff_color_moved_ws)
+		strvec_pushf(&args, "--color-moved-ws=%s", s->s.interactive_diff_color_moved_ws);
+
 	if (s->revision) {
 		struct object_id oid;
 		strvec_push(&args,
