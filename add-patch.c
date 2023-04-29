@@ -415,6 +415,8 @@ static int parse_diff(struct add_p_state *s, const struct pathspec *ps)
 {
 	struct strvec args = STRVEC_INIT;
 	const char *diff_algorithm = s->s.interactive_diff_algorithm;
+	const char *diff_color_moved = s->s.interactive_diff_color_moved;
+	const char *diff_color_moved_ws = s->s.interactive_diff_color_moved_ws;
 	struct strbuf *plain = &s->plain, *colored = NULL;
 	struct child_process cp = CHILD_PROCESS_INIT;
 	char *p, *pend, *colored_p = NULL, *colored_pend = NULL, marker = '\0';
@@ -426,6 +428,11 @@ static int parse_diff(struct add_p_state *s, const struct pathspec *ps)
 	strvec_pushv(&args, s->mode->diff_cmd);
 	if (diff_algorithm)
 		strvec_pushf(&args, "--diff-algorithm=%s", diff_algorithm);
+	if (diff_color_moved)
+		strvec_pushf(&args, "--color-moved=%s", diff_color_moved);
+	if (diff_color_moved_ws)
+		strvec_pushf(&args, "--color-moved-ws=%s", diff_color_moved_ws);
+
 	if (s->revision) {
 		struct object_id oid;
 		strvec_push(&args,

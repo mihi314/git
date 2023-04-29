@@ -79,6 +79,14 @@ void init_add_i_state(struct add_i_state *s, struct repository *r)
 	git_config_get_string("diff.algorithm",
 			      &s->interactive_diff_algorithm);
 
+	FREE_AND_NULL(s->interactive_diff_color_moved);
+	git_config_get_string("diff.colorMoved",
+			      &s->interactive_diff_color_moved);
+
+	FREE_AND_NULL(s->interactive_diff_color_moved_ws);
+	git_config_get_string("diff.colorMovedWS",
+			      &s->interactive_diff_color_moved_ws);
+
 	git_config_get_bool("interactive.singlekey", &s->use_single_key);
 	if (s->use_single_key)
 		setbuf(stdin, NULL);
@@ -88,6 +96,8 @@ void clear_add_i_state(struct add_i_state *s)
 {
 	FREE_AND_NULL(s->interactive_diff_filter);
 	FREE_AND_NULL(s->interactive_diff_algorithm);
+	FREE_AND_NULL(s->interactive_diff_color_moved);
+	FREE_AND_NULL(s->interactive_diff_color_moved_ws);
 	memset(s, 0, sizeof(*s));
 	s->use_color = -1;
 }
